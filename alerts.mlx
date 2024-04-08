@@ -1,0 +1,44 @@
+channelID = 2482441;
+alertApiKey = 'TAKz0MQ+o9Q/1vqHjAQ';
+alertUrl = 'https://api.thingspeak.com/alerts/send';
+options = weboptions('HeaderFields', {'ThingSpeak-Alerts-API-Key', alertApiKey});
+
+temperature = thingSpeakRead(channelID, 'NumDays', 30, 'Fields', 1);
+lastValueT = temperature(end);
+humidity = thingSpeakRead(channelID, 'NumDays', 30, 'Fields', 2);
+lastValueH = humidity(end);
+
+defaultMessage = "You should take some actions to solve it.";
+
+% Initialize variables for email
+alertBody = '';
+alertSubject = 'Alerts';
+
+% Alerts for temperature
+if (lastValueT < 17)
+    alertBody = [alertBody, 'Warning, the temperature is under the recommended values. ', defaultMessage, '\n'];
+end
+
+if (lastValueT > 23)
+    alertBody = [alertBody, 'Warning, exceeds the recommended range by a lot. ', defaultMessage, '\n'];
+end
+
+% Alerts for humidity
+if (lastValueH > 85)
+    alertBody = [alertBody, 'Warning, humidity exceeds the recommended values. ', defaultMessage, '\n'];
+end
+
+% If no alerts were triggered
+if isempty(alertBody)
+    alertBody = 'All running well.'; 
+    alertSubject = 'Everything OK';
+end
+
+try
+    pause(5); % Pause for 5 seconds before sending the request
+    
+    % Send combined alert
+    webwrite(alertUrl, 'body', alertBody, 'subject', alertSubject, options);
+catch someException
+    fprintf('Failed to send alert: %s\n', someException.message);
+end
